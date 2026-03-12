@@ -6,37 +6,31 @@ import java.time.LocalDateTime;
 
 @Data
 @Entity
-@Table(name = "user")
-public class User {
+@Table(name = "video_monitor")
+public class VideoMonitor {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, length = 100)
+    private String name;
+
     @Column(nullable = false, length = 50)
-    private String username;
+    private String deviceId;
 
-    @Column(nullable = false)
-    private String password;
-
-    @Column(length = 100)
-    private String email;
+    @Column(name = "rtsp_url", length = 255)
+    private String rtspUrl;
 
     @Column(length = 20)
-    private String phone;
+    private String status; // 在线、离线
 
-    @Column(length = 50)
-    private String nickname;
+    @Column(length = 100)
+    private String location;
 
-    @Column
-    private Integer age;
-
-    @Column(length = 10)
-    private String gender;
-
-    @Column
+    @Column(name = "create_time")
     private LocalDateTime createTime;
 
-    @Column
+    @Column(name = "update_time")
     private LocalDateTime updateTime;
 
     @PrePersist

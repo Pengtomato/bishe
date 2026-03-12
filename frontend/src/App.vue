@@ -5,9 +5,13 @@ import { RouterView, RouterLink } from 'vue-router'
 <template>
   <div id="app">
     <nav class="navbar">
-      <div class="nav-brand">毕业设计系统</div>
+      <div class="nav-brand">规模化养殖环境监控平台</div>
       <div class="nav-links">
         <RouterLink to="/">首页</RouterLink>
+        <RouterLink to="/environment">环境数据</RouterLink>
+        <RouterLink to="/video">视频监控</RouterLink>
+        <RouterLink to="/alert">预警管理</RouterLink>
+        <RouterLink to="/device">设备控制</RouterLink>
         <RouterLink to="/user">用户管理</RouterLink>
         <RouterLink to="/about">关于</RouterLink>
       </div>

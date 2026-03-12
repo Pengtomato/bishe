@@ -6,37 +6,34 @@ import java.time.LocalDateTime;
 
 @Data
 @Entity
-@Table(name = "user")
-public class User {
+@Table(name = "device")
+public class Device {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false, length = 50)
-    private String username;
+    private String deviceId;
 
-    @Column(nullable = false)
-    private String password;
+    @Column(nullable = false, length = 50)
+    private String deviceType; // 风机、水泵、照明、温控等
 
-    @Column(length = 100)
-    private String email;
+    @Column(nullable = false, length = 100)
+    private String name;
 
     @Column(length = 20)
-    private String phone;
+    private String status; // 开启、关闭
 
-    @Column(length = 50)
-    private String nickname;
+    @Column(length = 100)
+    private String location;
 
-    @Column
-    private Integer age;
+    @Column(name = "control_params", columnDefinition = "TEXT")
+    private String controlParams; // JSON格式的控制参数
 
-    @Column(length = 10)
-    private String gender;
-
-    @Column
+    @Column(name = "create_time")
     private LocalDateTime createTime;
 
-    @Column
+    @Column(name = "update_time")
     private LocalDateTime updateTime;
 
     @PrePersist
