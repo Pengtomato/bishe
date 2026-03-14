@@ -1,14 +1,16 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Home from '../views/Home.vue'
-import User from '../views/User.vue'
-import About from '../views/About.vue'
-import Environment from '../views/Environment.vue'
-import Video from '../views/Video.vue'
-import Alert from '../views/Alert.vue'
-import Device from '../views/Device.vue'
-import Login from '../views/Login.vue'
-import Profile from '../views/Profile.vue'
-import Report from '../views/Report.vue'
+
+// 懒加载路由组件
+const Home = () => import('../views/Home.vue')
+const User = () => import('../views/User.vue')
+const About = () => import('../views/About.vue')
+const Environment = () => import('../views/Environment.vue')
+const Video = () => import('../views/Video.vue')
+const Alert = () => import('../views/Alert.vue')
+const Device = () => import('../views/Device.vue')
+const Login = () => import('../views/Login.vue')
+const Profile = () => import('../views/Profile.vue')
+const Report = () => import('../views/Report.vue')
 
 const routes = [
   {
@@ -48,6 +50,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/alert-rule',
+    name: 'AlertRule',
+    component: () => import('../views/AlertRule.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
     path: '/device',
     name: 'Device',
     component: Device,
@@ -57,6 +65,12 @@ const routes = [
     path: '/about',
     name: 'About',
     component: About,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/help',
+    name: 'Help',
+    component: () => import('../views/Help.vue'),
     meta: { requiresAuth: true }
   },
   {

@@ -120,8 +120,11 @@ export default {
       try {
         const data = await environmentApi.getAll()
         environmentData.value = data
+        ElMessage.success('环境数据加载成功')
       } catch (error) {
         console.error('加载环境数据失败:', error)
+        ElMessage.error(`加载环境数据失败: ${error.message || '未知错误'}`)
+        environmentData.value = []
       }
     }
     
@@ -131,11 +134,14 @@ export default {
         if (searchForm.value.deviceId) {
           const data = await environmentApi.getByDeviceId(searchForm.value.deviceId)
           environmentData.value = data
+          ElMessage.success(`搜索到 ${data.length} 条数据`)
         } else {
           await loadEnvironmentData()
         }
       } catch (error) {
         console.error('搜索环境数据失败:', error)
+        ElMessage.error(`搜索环境数据失败: ${error.message || '未知错误'}`)
+        environmentData.value = []
       }
     }
     
@@ -173,13 +179,16 @@ export default {
       try {
         if (formData.value.id) {
           await environmentApi.update(formData.value.id, formData.value)
+          ElMessage.success('环境数据更新成功')
         } else {
           await environmentApi.create(formData.value)
+          ElMessage.success('环境数据添加成功')
         }
         dialogVisible.value = false
         await loadEnvironmentData()
       } catch (error) {
         console.error('提交环境数据失败:', error)
+        ElMessage.error(`提交环境数据失败: ${error.message || '未知错误'}`)
       }
     }
     
@@ -187,9 +196,11 @@ export default {
     const handleDelete = async (id) => {
       try {
         await environmentApi.delete(id)
+        ElMessage.success('环境数据删除成功')
         await loadEnvironmentData()
       } catch (error) {
         console.error('删除环境数据失败:', error)
+        ElMessage.error(`删除环境数据失败: ${error.message || '未知错误'}`)
       }
     }
     
