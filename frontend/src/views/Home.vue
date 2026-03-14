@@ -65,6 +65,61 @@
       </div>
     </el-card>
     
+    <el-card shadow="hover" class="mb-4">
+      <template #header>
+        <div class="card-header">
+          <span>数据图表</span>
+        </div>
+      </template>
+      
+      <div class="charts-container">
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-card shadow="hover" class="chart-card" @click="navigateTo('environment')">
+              <template #header>
+                <div class="card-header-small">
+                  <span>环境数据趋势</span>
+                </div>
+              </template>
+              <div ref="environmentChartRef" class="chart"></div>
+            </el-card>
+          </el-col>
+          <el-col :span="12">
+            <el-card shadow="hover" class="chart-card" @click="navigateTo('device')">
+              <template #header>
+                <div class="card-header-small">
+                  <span>设备状态分布</span>
+                </div>
+              </template>
+              <div ref="deviceStatusChartRef" class="chart"></div>
+            </el-card>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20" style="margin-top: 20px;">
+          <el-col :span="12">
+            <el-card shadow="hover" class="chart-card" @click="navigateTo('alert')">
+              <template #header>
+                <div class="card-header-small">
+                  <span>预警级别分布</span>
+                </div>
+              </template>
+              <div ref="alertLevelChartRef" class="chart"></div>
+            </el-card>
+          </el-col>
+          <el-col :span="12">
+            <el-card shadow="hover" class="chart-card" @click="navigateTo('video')">
+              <template #header>
+                <div class="card-header-small">
+                  <span>视频监控状态</span>
+                </div>
+              </template>
+              <div ref="videoStatusChartRef" class="chart"></div>
+            </el-card>
+          </el-col>
+        </el-row>
+      </div>
+    </el-card>
+    
     <el-card shadow="hover">
       <template #header>
         <div class="card-header">
@@ -131,9 +186,11 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { environmentApi, videoApi, alertApi, deviceApi } from '../api'
 import { DataAnalysis, VideoCamera, Warning, Monitor } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import * as echarts from 'echarts'
 
 export default {
   name: 'Home',
@@ -151,36 +208,277 @@ export default {
     const latestEnvironment = ref(null)
     const unprocessedAlerts = ref([])
     
+    // 图表引用
+    const environmentChartRef = ref(null)
+    const deviceStatusChartRef = ref(null)
+    const alertLevelChartRef = ref(null)
+    const videoStatusChartRef = ref(null)
+    
+    // 图表实例
+    let environmentChart = null
+    let deviceStatusChart = null
+    let alertLevelChart = null
+    let videoStatusChart = null
+    
+    // 真实数据处理函数
+    const processRealData = (data, defaultData = []) => {
+      return data && data.length > 0 ? data : defaultData
+    }
+
     // 加载统计数据
     const loadStats = async () => {
       try {
-        // 环境数据统计
-        const environmentData = await environmentApi.getAll()
+        // 从API获取真实的数据库数据
+        const environmentData = await environmentApi.getAll() || []
+        const videoData = await videoApi.getAll() || []
+        const alertData = await alertApi.getAll() || []
+        const deviceData = await deviceApi.getAll() || []
+        
+        // 更新统计数据
         environmentCount.value = environmentData.length
-        
-        // 视频监控统计
-        const videoData = await videoApi.getAll()
         videoCount.value = videoData.length
-        
-        // 预警统计
-        const alertData = await alertApi.getAll()
         alertCount.value = alertData.length
-        
-        // 设备统计
-        const deviceData = await deviceApi.getAll()
         deviceCount.value = deviceData.length
         
         // 最新环境数据
-        const latestData = await environmentApi.getLatestData()
-        if (latestData && latestData.length > 0) {
-          latestEnvironment.value = latestData[0]
+        if (environmentData && environmentData.length > 0) {
+          latestEnvironment.value = environmentData[environmentData.length - 1]
         }
         
         // 未处理预警
-        const unprocessedData = await alertApi.getUnprocessed()
-        unprocessedAlerts.value = unprocessedData
+        unprocessedAlerts.value = alertData.filter(alert => alert.status === '未处理')
+        
+        // 初始化图表
+        initCharts(environmentData, deviceData, alertData, videoData)
       } catch (error) {
         console.error('加载统计数据失败:', error)
+        // 显示错误信息给用户
+        ElMessage.error('加载数据失败，请检查后端服务是否运行')
+      }
+    }
+    
+    // 初始化图表
+    const initCharts = (environmentData, deviceData, alertData, videoData) => {
+      // 环境数据趋势图
+      if (environmentChartRef.value) {
+        environmentChart = echarts.init(environmentChartRef.value)
+        
+        // 准备数据
+        const timeData = environmentData.slice(-20).map(item => {
+          return new Date(item.timestamp).toLocaleTimeString()
+        })
+        const temperatureData = environmentData.slice(-20).map(item => item.temperature)
+        const humidityData = environmentData.slice(-20).map(item => item.humidity)
+        
+        const environmentOption = {
+          tooltip: {
+            trigger: 'axis'
+          },
+          legend: {
+            data: ['温度', '湿度']
+          },
+          grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
+          },
+          xAxis: {
+            type: 'category',
+            boundaryGap: false,
+            data: timeData
+          },
+          yAxis: {
+            type: 'value',
+            axisLabel: {
+              formatter: '{value}'
+            }
+          },
+          series: [
+            {
+              name: '温度',
+              type: 'line',
+              data: temperatureData,
+              smooth: true,
+              itemStyle: {
+                color: '#409EFF'
+              }
+            },
+            {
+              name: '湿度',
+              type: 'line',
+              data: humidityData,
+              smooth: true,
+              itemStyle: {
+                color: '#67C23A'
+              }
+            }
+          ]
+        }
+        
+        environmentChart.setOption(environmentOption)
+      }
+      
+      // 设备状态分布图
+      if (deviceStatusChartRef.value) {
+        deviceStatusChart = echarts.init(deviceStatusChartRef.value)
+        
+        // 统计设备状态
+        const statusCount = {}
+        deviceData.forEach(device => {
+          const status = device.status || '未知'
+          statusCount[status] = (statusCount[status] || 0) + 1
+        })
+        
+        const statusData = Object.keys(statusCount).map(key => ({
+          name: key,
+          value: statusCount[key]
+        }))
+        
+        const deviceStatusOption = {
+          tooltip: {
+            trigger: 'item'
+          },
+          legend: {
+            orient: 'vertical',
+            left: 'left'
+          },
+          series: [
+            {
+              name: '设备状态',
+              type: 'pie',
+              radius: '60%',
+              data: statusData,
+              emphasis: {
+                itemStyle: {
+                  shadowBlur: 10,
+                  shadowOffsetX: 0,
+                  shadowColor: 'rgba(0, 0, 0, 0.5)'
+                }
+              }
+            }
+          ]
+        }
+        
+        deviceStatusChart.setOption(deviceStatusOption)
+      }
+      
+      // 预警级别分布图
+      if (alertLevelChartRef.value) {
+        alertLevelChart = echarts.init(alertLevelChartRef.value)
+        
+        // 统计预警级别
+        const levelCount = {}
+        alertData.forEach(alert => {
+          const level = alert.level || '未知'
+          levelCount[level] = (levelCount[level] || 0) + 1
+        })
+        
+        const levelData = Object.keys(levelCount).map(key => ({
+          name: key,
+          value: levelCount[key]
+        }))
+        
+        const alertLevelOption = {
+          tooltip: {
+            trigger: 'item'
+          },
+          legend: {
+            orient: 'vertical',
+            left: 'left'
+          },
+          series: [
+            {
+              name: '预警级别',
+              type: 'pie',
+              radius: '60%',
+              data: levelData,
+              emphasis: {
+                itemStyle: {
+                  shadowBlur: 10,
+                  shadowOffsetX: 0,
+                  shadowColor: 'rgba(0, 0, 0, 0.5)'
+                }
+              }
+            }
+          ]
+        }
+        
+        alertLevelChart.setOption(alertLevelOption)
+      }
+      
+      // 视频监控状态图
+      if (videoStatusChartRef.value) {
+        videoStatusChart = echarts.init(videoStatusChartRef.value)
+        
+        // 统计视频监控状态
+        const videoStatusCount = {}
+        const processedVideoData = processRealData(videoData, [])
+        processedVideoData.forEach(video => {
+          const status = video.status || '未知'
+          videoStatusCount[status] = (videoStatusCount[status] || 0) + 1
+        })
+        
+        const videoStatusData = Object.keys(videoStatusCount).map(key => ({
+          name: key,
+          value: videoStatusCount[key]
+        }))
+        
+        const videoStatusOption = {
+          tooltip: {
+            trigger: 'item'
+          },
+          legend: {
+            orient: 'vertical',
+            left: 'left'
+          },
+          series: [
+            {
+              name: '视频监控状态',
+              type: 'pie',
+              radius: '60%',
+              data: videoStatusData,
+              emphasis: {
+                itemStyle: {
+                  shadowBlur: 10,
+                  shadowOffsetX: 0,
+                  shadowColor: 'rgba(0, 0, 0, 0.5)'
+                }
+              }
+            }
+          ]
+        }
+        
+        videoStatusChart.setOption(videoStatusOption)
+      }
+    }
+    
+    // 导航函数
+    const navigateTo = (path) => {
+      // 根据不同的路径跳转到对应的页面
+      switch (path) {
+        case 'environment':
+          // 跳转到环境数据页面
+          console.log('跳转到环境数据页面')
+          // 这里可以使用路由跳转，例如：router.push('/environment')
+          break
+        case 'device':
+          // 跳转到设备管理页面
+          console.log('跳转到设备管理页面')
+          // router.push('/device')
+          break
+        case 'alert':
+          // 跳转到预警管理页面
+          console.log('跳转到预警管理页面')
+          // router.push('/alert')
+          break
+        case 'video':
+          // 跳转到视频监控页面
+          console.log('跳转到视频监控页面')
+          // router.push('/video')
+          break
+        default:
+          break
       }
     }
     
@@ -190,8 +488,23 @@ export default {
       return new Date(datetime).toLocaleString()
     }
     
+    // 响应式调整图表大小
+    const handleResize = () => {
+      environmentChart?.resize()
+      deviceStatusChart?.resize()
+      alertLevelChart?.resize()
+    }
+    
     onMounted(() => {
       loadStats()
+      window.addEventListener('resize', handleResize)
+    })
+    
+    onUnmounted(() => {
+      window.removeEventListener('resize', handleResize)
+      environmentChart?.dispose()
+      deviceStatusChart?.dispose()
+      alertLevelChart?.dispose()
     })
     
     return {
@@ -201,7 +514,12 @@ export default {
       deviceCount,
       latestEnvironment,
       unprocessedAlerts,
-      formatDateTime
+      formatDateTime,
+      navigateTo,
+      environmentChartRef,
+      deviceStatusChartRef,
+      alertLevelChartRef,
+      videoStatusChartRef
     }
   }
 }
@@ -339,5 +657,19 @@ export default {
   align-items: center;
   height: 200px;
   color: #909399;
+}
+
+.charts-container {
+  margin-top: 20px;
+}
+
+.chart-card {
+  margin-bottom: 20px;
+  height: 300px;
+}
+
+.chart {
+  width: 100%;
+  height: calc(100% - 40px);
 }
 </style>
