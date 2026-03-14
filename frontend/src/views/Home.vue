@@ -4,10 +4,38 @@
       <template #header>
         <div class="card-header">
           <span>平台概览</span>
+          <div class="user-info">
+            <el-dropdown>
+              <span class="user-dropdown">
+                <el-avatar :size="32" :src="userAvatar"></el-avatar>
+                <span class="user-name">{{ user?.nickname || '游客' }}</span>
+                <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+              </span>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item @click="navigateTo('profile')">
+                    <el-icon><UserFilled /></el-icon>
+                    <span>个人信息</span>
+                  </el-dropdown-item>
+                  <el-dropdown-item divided @click="handleLogout">
+                    <el-icon><SwitchButton /></el-icon>
+                    <span>退出登录</span>
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
         </div>
       </template>
       
       <div class="dashboard-stats">
+        <div class="refresh-controls">
+          <el-button type="primary" size="small" @click="handleManualRefresh" :loading="refreshing">
+            <el-icon><Refresh /></el-icon>
+            刷新数据
+          </el-button>
+          <span class="last-update-time">最后更新: {{ lastUpdateTime }}</span>
+        </div>
         <el-row :gutter="20">
           <el-col :span="6">
             <el-card shadow="hover" class="stats-card">
@@ -188,9 +216,10 @@
 <script>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { environmentApi, videoApi, alertApi, deviceApi } from '../api'
-import { DataAnalysis, VideoCamera, Warning, Monitor } from '@element-plus/icons-vue'
+import { DataAnalysis, VideoCamera, Warning, Monitor, ArrowDown, UserFilled, SwitchButton, Refresh } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
+import router from '../router'
 
 export default {
   name: 'Home',
@@ -198,7 +227,11 @@ export default {
     DataAnalysis,
     VideoCamera,
     Warning,
-    Monitor
+    Monitor,
+    ArrowDown,
+    UserFilled,
+    SwitchButton,
+    Refresh
   },
   setup() {
     const environmentCount = ref(0)
@@ -207,12 +240,26 @@ export default {
     const deviceCount = ref(0)
     const latestEnvironment = ref(null)
     const unprocessedAlerts = ref([])
+    const user = ref(JSON.parse(localStorage.getItem('user')))
+    const userAvatar = ref('https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=professional%20user%20avatar%20portrait&image_size=square')
+    const refreshing = ref(false)
+    const lastUpdateTime = ref('')
+    let refreshTimer = null
     
     // 图表引用
     const environmentChartRef = ref(null)
     const deviceStatusChartRef = ref(null)
     const alertLevelChartRef = ref(null)
     const videoStatusChartRef = ref(null)
+    
+    // 登出函数
+    const handleLogout = () => {
+      localStorage.removeItem('user')
+      localStorage.removeItem('token')
+      user.value = null
+      ElMessage.success('登出成功')
+      router.push('/login')
+    }
     
     // 图表实例
     let environmentChart = null
@@ -228,6 +275,7 @@ export default {
     // 加载统计数据
     const loadStats = async () => {
       try {
+        refreshing.value = true
         // 从API获取真实的数据库数据
         const environmentData = await environmentApi.getAll() || []
         const videoData = await videoApi.getAll() || []
@@ -239,6 +287,9 @@ export default {
         videoCount.value = videoData.length
         alertCount.value = alertData.length
         deviceCount.value = deviceData.length
+        
+        // 更新时间
+        lastUpdateTime.value = new Date().toLocaleString()
         
         // 最新环境数据
         if (environmentData && environmentData.length > 0) {
@@ -254,6 +305,29 @@ export default {
         console.error('加载统计数据失败:', error)
         // 显示错误信息给用户
         ElMessage.error('加载数据失败，请检查后端服务是否运行')
+      } finally {
+        refreshing.value = false
+      }
+    }
+    
+    // 手动刷新
+    const handleManualRefresh = () => {
+      loadStats()
+    }
+    
+    // 启动自动刷新
+    const startAutoRefresh = () => {
+      // 每30秒自动刷新一次数据
+      refreshTimer = setInterval(() => {
+        loadStats()
+      }, 30000)
+    }
+    
+    // 停止自动刷新
+    const stopAutoRefresh = () => {
+      if (refreshTimer) {
+        clearInterval(refreshTimer)
+        refreshTimer = null
       }
     }
     
@@ -459,23 +533,23 @@ export default {
       switch (path) {
         case 'environment':
           // 跳转到环境数据页面
-          console.log('跳转到环境数据页面')
-          // 这里可以使用路由跳转，例如：router.push('/environment')
+          router.push('/environment')
           break
         case 'device':
           // 跳转到设备管理页面
-          console.log('跳转到设备管理页面')
-          // router.push('/device')
+          router.push('/device')
           break
         case 'alert':
           // 跳转到预警管理页面
-          console.log('跳转到预警管理页面')
-          // router.push('/alert')
+          router.push('/alert')
           break
         case 'video':
           // 跳转到视频监控页面
-          console.log('跳转到视频监控页面')
-          // router.push('/video')
+          router.push('/video')
+          break
+        case 'profile':
+          // 跳转到个人信息页面
+          router.push('/profile')
           break
         default:
           break
@@ -497,10 +571,12 @@ export default {
     
     onMounted(() => {
       loadStats()
+      startAutoRefresh()
       window.addEventListener('resize', handleResize)
     })
     
     onUnmounted(() => {
+      stopAutoRefresh()
       window.removeEventListener('resize', handleResize)
       environmentChart?.dispose()
       deviceStatusChart?.dispose()
@@ -514,6 +590,12 @@ export default {
       deviceCount,
       latestEnvironment,
       unprocessedAlerts,
+      user,
+      userAvatar,
+      refreshing,
+      lastUpdateTime,
+      handleLogout,
+      handleManualRefresh,
       formatDateTime,
       navigateTo,
       environmentChartRef,
@@ -536,6 +618,42 @@ export default {
   align-items: center;
 }
 
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-dropdown {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.user-dropdown:hover {
+  background-color: #f5f7fa;
+}
+
+.user-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133;
+}
+
+.el-avatar {
+  border: 2px solid #e4e7ed;
+  transition: all 0.3s ease;
+}
+
+.user-dropdown:hover .el-avatar {
+  border-color: #409EFF;
+  transform: scale(1.05);
+}
+
 .card-header-small {
   display: flex;
   justify-content: space-between;
@@ -549,6 +667,27 @@ export default {
 
 .dashboard-stats {
   margin-top: 20px;
+}
+
+.refresh-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 10px 15px;
+  background-color: #f5f7fa;
+  border-radius: 8px;
+}
+
+.refresh-controls .el-button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.last-update-time {
+  font-size: 12px;
+  color: #909399;
 }
 
 .stats-card {
@@ -613,16 +752,21 @@ export default {
 
 .status-card {
   height: 280px;
+  display: flex;
+  flex-direction: column;
 }
 
 .environment-data {
   margin-top: 10px;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .alert-list {
   margin-top: 10px;
-  max-height: 200px;
+  flex: 1;
   overflow-y: auto;
+  padding-right: 5px;
 }
 
 .alert-item {

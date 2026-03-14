@@ -39,6 +39,9 @@ public class User {
     @Column
     private LocalDateTime updateTime;
 
+    @Column(nullable = false, length = 20)
+    private String role; // 角色：admin 或 user
+
     @PrePersist
     protected void onCreate() {
         createTime = LocalDateTime.now();

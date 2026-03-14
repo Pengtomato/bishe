@@ -4,10 +4,16 @@
       <template #header>
         <div class="card-header">
           <span>环境数据管理</span>
-          <el-button type="primary" size="small" @click="handleAdd">
-            <el-icon><Plus /></el-icon>
-            添加数据
-          </el-button>
+          <div class="header-actions">
+            <el-button type="primary" size="small" @click="handleAdd">
+              <el-icon><Plus /></el-icon>
+              添加数据
+            </el-button>
+            <el-button type="success" size="small" @click="handleExport">
+              <el-icon><Download /></el-icon>
+              导出数据
+            </el-button>
+          </div>
         </div>
       </template>
       
@@ -82,12 +88,14 @@
 <script>
 import { ref, onMounted } from 'vue'
 import { environmentApi } from '../api'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Download } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 export default {
   name: 'Environment',
   components: {
-    Plus
+    Plus,
+    Download
   },
   setup() {
     const environmentData = ref([])
@@ -185,6 +193,48 @@ export default {
       }
     }
     
+    // 导出环境数据
+    const handleExport = () => {
+      if (environmentData.value.length === 0) {
+        ElMessage.warning('暂无数据可导出')
+        return
+      }
+      
+      try {
+        // 生成CSV格式的数据
+        const headers = ['ID', '设备ID', '温度(℃)', '湿度(%)', 'CO2(ppm)', '氨气(ppm)', '光照强度(lux)', '采集时间']
+        const csvContent = [
+          headers.join(','),
+          ...environmentData.value.map(row => 
+            headers.map(header => {
+              const key = header.toLowerCase().replace(/[()]/g, '').replace(/[^a-z]/g, '')
+              let value = row[key]
+              if (key === 'timestamp' && value) {
+                value = new Date(value).toLocaleString()
+              }
+              return value || '-'
+            }).join(',')
+          )
+        ].join('\n')
+        
+        // 创建下载链接
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', `环境数据_${new Date().toISOString().split('T')[0]}.csv`)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        
+        ElMessage.success('数据导出成功')
+      } catch (error) {
+        console.error('导出数据失败:', error)
+        ElMessage.error('导出数据失败，请重试')
+      }
+    }
+    
     // 格式化日期时间
     const formatDateTime = (datetime) => {
       if (!datetime) return ''
@@ -207,6 +257,7 @@ export default {
       handleEdit,
       handleSubmit,
       handleDelete,
+      handleExport,
       formatDateTime
     }
   }
@@ -216,6 +267,8 @@ export default {
 <style scoped>
 .environment-container {
   padding: 20px;
+  background-color: #f5f7fa;
+  min-height: 100vh;
 }
 
 .card-header {
@@ -231,5 +284,89 @@ export default {
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
+}
+
+/* 卡片样式 */
+.el-card {
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.el-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+/* 表格样式 */
+.el-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.el-table th {
+  background-color: #f5f7fa;
+  font-weight: 600;
+}
+
+.el-table tr:hover {
+  background-color: #f0f9eb;
+}
+
+/* 表单样式 */
+.el-form-item {
+  margin-bottom: 16px;
+}
+
+/* 按钮样式 */
+.el-button {
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.el-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 输入框样式 */
+.el-input {
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.el-input:focus {
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+}
+
+/* 对话框样式 */
+.el-dialog {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.el-dialog__header {
+  background-color: #f5f7fa;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+/* 加载动画 */
+.el-loading {
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .environment-container {
+    padding: 10px;
+  }
+  
+  .el-table {
+    font-size: 14px;
+  }
+  
+  .el-table-column {
+    width: auto !important;
+  }
 }
 </style>

@@ -1,5 +1,30 @@
 <script setup>
-import { RouterView, RouterLink } from 'vue-router'
+import { RouterView, RouterLink, useRouter, useRoute } from 'vue-router'
+import { ref, onMounted, watch } from 'vue'
+
+const user = ref(null)
+const router = useRouter()
+const route = useRoute()
+
+const loadUser = () => {
+  const userData = localStorage.getItem('user')
+  if (userData) {
+    user.value = JSON.parse(userData)
+  } else {
+    user.value = null
+  }
+}
+
+onMounted(() => {
+  loadUser()
+  // 监听存储变化，以便在登录/登出后更新用户状态
+  window.addEventListener('storage', loadUser)
+})
+
+// 监听路由变化，确保用户状态始终最新
+watch(() => route.path, () => {
+  loadUser()
+})
 </script>
 
 <template>
@@ -12,7 +37,8 @@ import { RouterView, RouterLink } from 'vue-router'
         <RouterLink to="/video">视频监控</RouterLink>
         <RouterLink to="/alert">预警管理</RouterLink>
         <RouterLink to="/device">设备控制</RouterLink>
-        <RouterLink to="/user">用户管理</RouterLink>
+        <RouterLink to="/report">数据报表</RouterLink>
+        <RouterLink to="/user" v-if="user && user.role === 'admin'">用户管理</RouterLink>
         <RouterLink to="/about">关于</RouterLink>
       </div>
     </nav>

@@ -47,6 +47,7 @@ public class DataInitializer implements CommandLineRunner {
         admin.setPhone("13800138000");
         admin.setAge(30);
         admin.setGender("男");
+        admin.setRole("admin");
         userRepository.save(admin);
 
         User user = new User();
@@ -57,6 +58,7 @@ public class DataInitializer implements CommandLineRunner {
         user.setPhone("13800138001");
         user.setAge(25);
         user.setGender("女");
+        user.setRole("user");
         userRepository.save(user);
     }
 

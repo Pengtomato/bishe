@@ -60,7 +60,7 @@
             {{ formatDateTime(scope.row.timestamp) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="300" fixed="right">
           <template #default="scope">
             <el-button type="primary" size="small" @click="handleView(scope.row)">
               详情

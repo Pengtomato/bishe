@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
     nickname VARCHAR(50),
     age INTEGER,
     gender VARCHAR(10),
+    role VARCHAR(20) NOT NULL,
     create_time TIMESTAMP,
     update_time TIMESTAMP
 );
@@ -65,9 +66,9 @@ CREATE TABLE IF NOT EXISTS video_monitor (
 );
 
 -- 插入用户数据
-INSERT INTO users (username, password, nickname, email, phone, age, gender, create_time, update_time) VALUES
-('admin', 'admin123', '管理员', 'admin@example.com', '13800138000', 30, '男', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('user', 'user123', '普通用户', 'user@example.com', '13800138001', 25, '女', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO users (username, password, nickname, email, phone, age, gender, role, create_time, update_time) VALUES
+('admin', 'admin123', '管理员', 'admin@example.com', '13800138000', 30, '男', 'admin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('user', 'user123', '普通用户', 'user@example.com', '13800138001', 25, '女', 'user', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- 插入设备数据
 INSERT INTO device (device_id, name, device_type, location, status, control_params, create_time, update_time) VALUES
